@@ -1,0 +1,14 @@
+{
+  "name": "wonderclip-ai",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@fal-ai/client": "^1.0.0",
+    "express": "^5.1.0",
+    "multer": "^2.0.0"
+  }
+}
