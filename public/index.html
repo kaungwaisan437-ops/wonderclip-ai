@@ -1,0 +1,238 @@
+
+<!DOCTYPE html>
+<html lang="my">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WonderClip AI</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #10121b;
+      color: #fff;
+    }
+    header {
+      padding: 22px 16px;
+      text-align: center;
+      background: #191c2b;
+      border-bottom: 1px solid #34374a;
+    }
+    header h1 { margin: 0; color: #a995ff; }
+    header p { color: #c4c6d5; margin-bottom: 0; }
+    main { max-width: 650px; margin: auto; padding: 20px 15px; }
+    .panel {
+      background: #1b1e2d;
+      padding: 18px;
+      border-radius: 16px;
+      margin-bottom: 18px;
+      border: 1px solid #34374a;
+    }
+    label { display: block; margin: 14px 0 8px; font-weight: bold; }
+    select, textarea, input, button {
+      width: 100%;
+      padding: 13px;
+      border-radius: 10px;
+      border: 1px solid #42465d;
+      background: #111421;
+      color: white;
+      font-size: 16px;
+    }
+    textarea { min-height: 115px; resize: vertical; }
+    button {
+      margin-top: 15px;
+      background: #7960f5;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .6; }
+    .hint { color: #b9bbca; font-size: 13px; line-height: 1.6; }
+    #preview { width: 100%; max-height: 260px; object-fit: contain; margin-top: 12px; display: none; }
+    #video { width: 100%; margin-top: 12px; display: none; }
+    #status { white-space: pre-wrap; line-height: 1.6; }
+    a { color: #c1b4ff; }
+    footer { text-align: center; padding: 20px; color: #999db2; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>✨ WonderClip AI</h1>
+    <p id="tagline">စာသားနဲ့ ပုံတွေကနေ ဗီဒီယိုဖန်တီးပါ</p>
+  </header>
+
+  <main>
+    <section class="panel">
+      <label for="language">Language / ဘာသာစကား</label>
+      <select id="language">
+        <option value="my">မြန်မာ</option>
+        <option value="en">English</option>
+      </select>
+
+      <label for="mode" id="modeLabel">ဖန်တီးမယ့်အမျိုးအစား</label>
+      <select id="mode">
+        <option value="text">စာသားမှ ဗီဒီယို (Text to Video)</option>
+        <option value="image">ပုံမှ ဗီဒီယို (Image to Video)</option>
+      </select>
+
+      <label for="prompt" id="promptLabel">ဗီဒီယိုအကြောင်း ဖော်ပြပါ</label>
+      <textarea id="prompt" placeholder="ဥပမာ - နေဝင်ချိန်မှာ တောင်တန်းတွေကြား ပျံသန်းနေတဲ့ ငှက်တစ်ကောင်၊ cinematic style"></textarea>
+
+      <div id="imageArea" hidden>
+        <label for="image" id="imageLabel">ပုံရွေးပါ</label>
+        <input id="image" type="file" accept="image/*">
+        <img id="preview" alt="ရွေးထားသောပုံ">
+      </div>
+
+      <button id="generate">🎬 ဗီဒီယိုဖန်တီးမယ်</button>
+      <p class="hint" id="hint">AI ဗီဒီယိုဖန်တီးရန် ဆာဗာနှင့် API Key ချိတ်ဆက်ထားဖို့ လိုအပ်ပါတယ်။</p>
+    </section>
+
+    <section class="panel">
+      <h3 id="resultTitle">ရလဒ်</h3>
+      <p id="status">ဗီဒီယိုဖန်တီးဖို့ အဆင်သင့်ပါ။</p>
+      <video id="video" controls playsinline></video>
+      <p><a id="download" href="#" download hidden>ဗီဒီယိုကို ရယူရန်</a></p>
+    </section>
+  </main>
+
+  <footer>WonderClip AI · Create your imagination</footer>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    let selectedImage = null;
+
+    const words = {
+      my: {
+        tagline: "စာသားနဲ့ ပုံတွေကနေ ဗီဒီယိုဖန်တီးပါ",
+        mode: "ဖန်တီးမယ့်အမျိုးအစား",
+        text: "စာသားမှ ဗီဒီယို (Text to Video)",
+        imageMode: "ပုံမှ ဗီဒီယို (Image to Video)",
+        prompt: "ဗီဒီယိုအကြောင်း ဖော်ပြပါ",
+        placeholder: "ဥပမာ - နေဝင်ချိန်မှာ တောင်တန်းတွေကြား ပျံသန်းနေတဲ့ ငှက်တစ်ကောင်",
+        image: "ပုံရွေးပါ",
+        generate: "🎬 ဗီဒီယိုဖန်တီးမယ်",
+        hint: "AI ဗီဒီယိုဖန်တီးရန် ဆာဗာနှင့် API Key ချိတ်ဆက်ထားဖို့ လိုအပ်ပါတယ်။",
+        result: "ရလဒ်",
+        ready: "ဗီဒီယိုဖန်တီးဖို့ အဆင်သင့်ပါ။",
+        needPrompt: "ဗီဒီယိုအကြောင်းကို အရင်ရေးပေးပါ။",
+        needImage: "ဆက်လုပ်ဖို့ ပုံတစ်ပုံ ရွေးပေးပါ။",
+        working: "ဗီဒီယိုဖန်တီးနေပါတယ်။ ခဏစောင့်ပေးပါ...",
+        failed: "မအောင်မြင်ပါ။ ဆာဗာချိတ်ဆက်မှုနဲ့ API Key ကို စစ်ဆေးပါ။",
+        success: "ဗီဒီယို အဆင်သင့်ဖြစ်ပါပြီ။",
+        download: "ဗီဒီယိုကို ရယူရန်"
+      },
+      en: {
+        tagline: "Create videos from text and images",
+        mode: "Creation type",
+        text: "Text to Video",
+        imageMode: "Image to Video",
+        prompt: "Describe your video",
+        placeholder: "Example: A bird flying over mountains at sunset, cinematic style",
+        image: "Choose an image",
+        generate: "🎬 Generate Video",
+        hint: "Video generation requires a connected server and API key.",
+        result: "Result",
+        ready: "Ready to create a video.",
+        needPrompt: "Please describe your video first.",
+        needImage: "Please select an image first.",
+        working: "Generating your video. Please wait...",
+        failed: "Generation failed. Check the server connection and API key.",
+        success: "Your video is ready.",
+        download: "Download video"
+      }
+    };
+
+    function updateLanguage() {
+      const w = words[$("language").value];
+      $("tagline").textContent = w.tagline;
+      $("modeLabel").textContent = w.mode;
+      $("mode").options[0].textContent = w.text;
+      $("mode").options[1].textContent = w.imageMode;
+      $("promptLabel").textContent = w.prompt;
+      $("prompt").placeholder = w.placeholder;
+      $("imageLabel").textContent = w.image;
+      $("generate").textContent = w.generate;
+      $("hint").textContent = w.hint;
+      $("resultTitle").textContent = w.result;
+      $("download").textContent = w.download;
+      if (!$("status").dataset.busy) $("status").textContent = w.ready;
+    }
+
+    $("language").addEventListener("change", updateLanguage);
+
+    $("mode").addEventListener("change", () => {
+      const useImage = $("mode").value === "image";
+      $("imageArea").hidden = !useImage;
+    });
+
+    $("image").addEventListener("change", event => {
+      selectedImage = event.target.files[0] || null;
+      if (!selectedImage) {
+        $("preview").style.display = "none";
+        return;
+      }
+      $("preview").src = URL.createObjectURL(selectedImage);
+      $("preview").style.display = "block";
+    });
+
+    $("generate").addEventListener("click", async () => {
+      const w = words[$("language").value];
+      const prompt = $("prompt").value.trim();
+      const mode = $("mode").value;
+
+      if (!prompt) {
+        $("status").textContent = w.needPrompt;
+        return;
+      }
+      if (mode === "image" && !selectedImage) {
+        $("status").textContent = w.needImage;
+        return;
+      }
+
+      const form = new FormData();
+      form.append("prompt", prompt);
+      form.append("mode", mode);
+      if (selectedImage && mode === "image") {
+        form.append("image", selectedImage);
+      }
+
+      $("generate").disabled = true;
+      $("status").dataset.busy = "1";
+      $("status").textContent = w.working;
+      $("video").style.display = "none";
+      $("download").hidden = true;
+
+      try {
+        const response = await fetch("/api/generate", {
+          method: "POST",
+          body: form
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || data.message || w.failed);
+        }
+        if (!data.videoUrl) {
+          throw new Error(data.error || "No video URL returned by server.");
+        }
+
+        $("video").src = data.videoUrl;
+        $("video").style.display = "block";
+        $("download").href = data.videoUrl;
+        $("download").hidden = false;
+        $("status").textContent = w.success;
+      } catch (error) {
+        $("status").textContent = w.failed + "\n" + error.message;
+      } finally {
+        delete $("status").dataset.busy;
+        $("generate").disabled = false;
+      }
+    });
+
+    updateLanguage();
+  </script>
+</body>
+        </html>
+        
